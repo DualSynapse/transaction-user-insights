@@ -1,0 +1,110 @@
+paths:
+  raw_csv: data/raw/transactions.csv
+  external_dir: data/external
+  interim_dir: data/interim
+  processed_dir: data/processed
+  reports_dir: outputs/reports
+  figures_dir: outputs/figures
+  logs_dir: outputs/logs
+
+  transactions_clean: data/interim/transactions_clean.parquet
+  dq_report: outputs/reports/data_quality_report.json
+
+  transactions_enriched: data/processed/transactions_enriched.parquet
+  user_features: data/processed/user_features.parquet
+  feature_dictionary: data/processed/feature_dictionary.csv
+  demographic_feasibility: data/processed/demographic_feasibility.csv
+  feature_meta: data/processed/feature_meta.json
+
+  report_pdf: outputs/reports/transaction_insights_report.pdf
+  analysis_results: outputs/reports/analysis_results.json
+
+cleaning:
+  csv_sep: ";"
+  missing_tokens: ["", "na", "n/a", "null", "none", "nan", "-", "?"]
+  category_columns:
+    payment_method: ["balance", "credit_card"]
+    transaction_status: ["completed", "failed"]
+    loyalty_program: ["yes", "no"]
+    discount_applied: ["yes", "no"]
+    transaction_notes: ["yes", "no"]
+    is_refunded: ["yes", "no"]
+  date_format: "%d/%m/%Y"
+  legacy_os_thresholds:
+    Android: 8.0
+    iOS: null   # iPhone/iPad version not present in user_agent; not evaluated
+
+geo:
+  boundary_url: "https://raw.githubusercontent.com/rifani/geojson-political-indonesia/master/IDN_adm_2_kabkota.json"
+  boundary_file: "IDN_adm_2_kabkota.json"
+  province_col: "NAME_1"
+  regency_col: "NAME_2"
+  type_col: "TYPE_2"
+  nearest_max_km: 50
+  name_normalization:
+    provinces:
+      "Jakarta Raya": "DKI Jakarta"
+      "Yogyakarta": "DI Yogyakarta"
+    city_type_map:
+      "Kotamadya": "Kota"
+      "Kabupaten": "Kabupaten"
+      "Unknown": "Kabupaten"
+  region_groups:
+    "Jabodetabek": ["Kota Jakarta Pusat", "Kota Jakarta Selatan", "Kota Jakarta Utara",
+                     "Kota Jakarta Barat", "Kota Jakarta Timur", "Kota Depok",
+                     "Kota Bekasi", "Kota Bogor", "Kota Tangerang"]
+    "Central Java & DIY": ["Kota Semarang", "Kabupaten Bantul"]
+    "East Java": ["Kota Surabaya", "Kota Malang"]
+  fallback_centroids:
+    "Kota Jakarta Pusat": {province: "DKI Jakarta", lat: -6.1862, lon: 106.8347, city_type: "Kota"}
+    "Kota Jakarta Selatan": {province: "DKI Jakarta", lat: -6.2615, lon: 106.8106, city_type: "Kota"}
+    "Kota Surabaya": {province: "Jawa Timur", lat: -7.2575, lon: 112.7521, city_type: "Kota"}
+    "Kota Tangerang": {province: "Banten", lat: -6.1783, lon: 106.6319, city_type: "Kota"}
+    "Kota Depok": {province: "Jawa Barat", lat: -6.4025, lon: 106.7942, city_type: "Kota"}
+    "Kota Bekasi": {province: "Jawa Barat", lat: -6.2383, lon: 106.9756, city_type: "Kota"}
+    "Kota Bogor": {province: "Jawa Barat", lat: -6.5971, lon: 106.8060, city_type: "Kota"}
+    "Kabupaten Bantul": {province: "DI Yogyakarta", lat: -7.8877, lon: 110.3286, city_type: "Kabupaten"}
+    "Kota Malang": {province: "Jawa Timur", lat: -7.9666, lon: 112.6326, city_type: "Kota"}
+    "Kota Semarang": {province: "Jawa Tengah", lat: -6.9932, lon: 110.4203, city_type: "Kota"}
+
+calendar:
+  lebaran_start: "2024-04-07"
+  lebaran_end: "2024-04-13"
+  payday_days: [25, 26, 27, 28, 29, 30, 31, 1, 2, 3]
+
+assumptions:
+  transaction_amount_is_gross: true   # transaction_amount is recorded before discount
+  mdr:
+    balance: 0.007
+    credit_card: 0.022
+
+analysis:
+  alpha: 0.05
+  min_users_per_merchant: 20
+  os_coverage_target: 0.90
+
+mcc:
+  "4722": {description: "Travel Agencies", group: "Travel"}
+  "5251": {description: "Hardware Stores", group: "Home"}
+  "5311": {description: "Department Stores", group: "Retail"}
+  "5411": {description: "Grocery Stores/Supermarkets", group: "Essentials"}
+  "5412": {description: "Non-standard/Misc MCC", group: "Other"}
+  "5541": {description: "Service Stations (Fuel)", group: "Vehicle"}
+  "5651": {description: "Family Clothing Stores", group: "Retail"}
+  "5661": {description: "Shoe Stores", group: "Retail"}
+  "5712": {description: "Furniture Stores", group: "Home"}
+  "5732": {description: "Electronics Stores", group: "Retail"}
+  "5812": {description: "Restaurants", group: "Food & Dining"}
+  "5814": {description: "Fast Food Restaurants", group: "Food & Dining"}
+  "5912": {description: "Drug Stores/Pharmacies", group: "Health"}
+  "5941": {description: "Sporting Goods Stores", group: "Active Lifestyle"}
+  "5942": {description: "Book Stores", group: "Retail"}
+  "5964": {description: "Direct Marketing/Catalog", group: "Retail"}
+  "5999": {description: "Miscellaneous Retail", group: "Retail"}
+  "7230": {description: "Beauty/Barber Shops", group: "Personal Care"}
+  "7994": {description: "Video Game Arcades", group: "Entertainment"}
+  "8211": {description: "Elementary/Secondary Schools", group: "Education"}
+  "8220": {description: "Colleges/Universities", group: "Education"}
+
+mcc_social: ["5812", "5814", "7994"]
+mcc_essential: ["5411", "5912"]
