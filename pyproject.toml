@@ -1,0 +1,24 @@
+[project]
+name = "transaction-user-insights"
+version = "0.1.0"
+description = "Cleans raw transaction data, builds a per-user feature table, and generates an automated PDF insights report."
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "pyarrow>=14",
+    "pyyaml>=6",
+    "geopandas>=0.14",
+    "shapely>=2.0",
+    "scipy>=1.10",
+    "matplotlib>=3.7",
+    "reportlab>=4.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7",
+]
+
+[tool.uv]
+package = false

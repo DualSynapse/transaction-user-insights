@@ -9,3 +9,5 @@ outputs/
 *.egg-info/
 .venv/
 venv/
+
+IMPLEMENTATION_PLAN*.md

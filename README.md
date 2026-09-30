@@ -6,6 +6,15 @@ report covering a data audit and eight business questions.
 
 ## Setup
 
+With [uv](https://docs.astral.sh/uv/) (recommended — installs into a local `.venv` and
+pins exact versions via `uv.lock`):
+
+```bash
+uv sync
+```
+
+Or with plain pip:
+
 ```bash
 pip install -r requirements.txt
 ```
@@ -16,12 +25,14 @@ centroid-based fallback for geo enrichment (see `src/cleaning/geo_enrichment.py`
 ## Usage
 
 ```bash
-python main.py                      # run all stages
-python main.py --stage clean        # cleaning + geo enrichment only
-python main.py --stage features     # feature engineering only (requires clean output)
-python main.py --stage report       # report only (requires features output)
-python main.py --config other.yaml  # use a different config file
+uv run python main.py                      # run all stages
+uv run python main.py --stage clean        # cleaning + geo enrichment only
+uv run python main.py --stage features     # feature engineering only (requires clean output)
+uv run python main.py --stage report       # report only (requires features output)
+uv run python main.py --config other.yaml  # use a different config file
 ```
+
+(Drop the `uv run` prefix if you installed with pip into an already-active environment.)
 
 Each stage reads the previous stage's output from disk, so stages can be re-run
 independently. If a required input is missing, the pipeline exits with a clear message
@@ -72,7 +83,7 @@ unavailable) -> `unmatched`. The method used is recorded per transaction in
 ## Testing
 
 ```bash
-pytest
+uv run pytest
 ```
 
 Tests use small synthetic fixtures and don't need the original dataset (the end-to-end
