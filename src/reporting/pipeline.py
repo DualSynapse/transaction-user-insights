@@ -3,7 +3,7 @@ import logging
 
 from src.reporting.analyses import run_all_analyses
 from src.reporting.pdf_builder import ReportBuilder
-from src.utils.io import read_json, read_table, write_json
+from src.utils.tools import read_json, read_table, write_json
 
 logger = logging.getLogger("pipeline")
 

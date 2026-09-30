@@ -5,7 +5,7 @@ import time
 import traceback
 
 from src.utils.config import load_config
-from src.utils.io import table_exists
+from src.utils.tools import table_exists
 from src.utils.logger import setup_logger
 
 STAGES = ["clean", "features", "report"]

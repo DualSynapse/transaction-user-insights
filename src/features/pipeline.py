@@ -7,7 +7,7 @@ from src.features.demographics import add_demographic_signals, build_feasibility
 from src.features.personality import add_personality_traits
 from src.features.transaction_level import add_transaction_features
 from src.features.user_level import build_user_features
-from src.utils.io import read_table, write_json, write_table
+from src.utils.tools import read_table, write_json, write_table
 
 logger = logging.getLogger("pipeline")
 

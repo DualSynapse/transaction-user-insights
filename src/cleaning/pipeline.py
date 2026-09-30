@@ -8,7 +8,7 @@ from src.cleaning.consistency import check_consistency
 from src.cleaning.device_parser import parse_devices
 from src.cleaning.geo_enrichment import enrich_geo
 from src.cleaning.standardize import standardize
-from src.utils.io import write_json, write_table
+from src.utils.tools import write_json, write_table
 
 logger = logging.getLogger("pipeline")
 
