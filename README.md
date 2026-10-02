@@ -2,7 +2,7 @@
 
 Turns the raw transaction dataset into clean, geo-enriched transaction data, a per-user
 feature table (including Big Five proxies and 14 demographic proxies), a behavioral user
-segmentation (K-Means), and an automated PDF report.
+segmentation (K-Means), and two PDF reports built from that work.
 
 ## Submission layout
 
@@ -160,15 +160,16 @@ smoke test generates its own sample CSV, but reuses the already-cached boundary 
 ## Known limitations
 
 - The dataset is synthetic: 33.6% of transactions have a blank status (treated as a third
-  "pending" category rather than as missing data), and most cross-variable relationships
-  tested in the report are weak or not statistically significant.
+  "pending" category rather than as missing data), and most of the statistical tests in
+  `transaction_insights_report.pdf`'s business-question appendix are weak or not
+  statistically significant.
 - There is no promo-source column, so merchant- vs. platform-funded discounts
   (supplementary business question 2) are inferred heuristically.
 - Every requested demographic attribute except Industry of Employment has a heuristic proxy
   (`src/features/demographics.py`) with its own confidence column; confidence is mostly
-  "low"/"none" by design because the underlying signals are weak - see Chapter 3.10 of the
-  PDF report or `data/processed/demographic_feasibility.csv` for the one attribute left
-  undone and why.
+  "low"/"none" by design because the underlying signals are weak - see Chapter 3.10 of
+  `transaction_insights_report.pdf` or `data/processed/demographic_feasibility.csv` for the
+  one attribute left undone and why.
 - Segmentation is K-Means on a fixed feature set chosen for interpretability, not an
   exhaustive model search; silhouette scores on this dataset are modest, consistent with
   the weak correlation structure already observed in the Big Five proxy validation.
