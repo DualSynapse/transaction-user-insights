@@ -64,6 +64,18 @@ FEATURE_DESCRIPTIONS = {
     "home_city_estimate": ("demographics", "Estimated home city (= primary transaction city)"),
     "home_city_confidence": ("demographics", "Confidence in the home city estimate (none/low/medium/high)"),
     "income_proxy_tier": ("demographics", "Weak income proxy tier from credit-card usage and spend level"),
+    "gender_lean_signal": ("demographics", "Exploratory retail-category stereotype lean (female_lean/male_lean/neutral) - not an identity claim"),
+    "gender_lean_confidence": ("demographics", "Confidence in the gender lean signal (mostly none/low by design)"),
+    "age_bracket_estimate": ("demographics", "Age bracket inferred from student/parental MCC signals"),
+    "age_bracket_confidence": ("demographics", "Confidence in the age bracket estimate"),
+    "education_signal": ("demographics", "Whether university-category (MCC 8220) spend suggests current tertiary education"),
+    "education_confidence": ("demographics", "Confidence in the education signal"),
+    "work_location_estimate": ("demographics", "Weekday-dominant city if different from the overall (home) dominant city"),
+    "work_location_confidence": ("demographics", "Confidence in the work location estimate"),
+    "working_status_estimate": ("demographics", "Payday/weekday activity pattern suggesting likely regular employment"),
+    "working_status_confidence": ("demographics", "Confidence in the working status estimate (capped at low)"),
+    "marital_family_proxy": ("demographics", "Weak composite of parental signal + loyalty + a geographically settled primary city"),
+    "marital_family_confidence": ("demographics", "Confidence in the marital/family proxy (capped at low)"),
 }
 
 PERSONALITY_TRAITS = ["openness", "conscientiousness", "extraversion", "agreeableness", "neuroticism"]
@@ -118,10 +130,10 @@ def run_features(cfg) -> pd.DataFrame:
     logger.info("Wrote user features to %s (%d rows, %d cols)", cfg.path("user_features"), *user_features.shape)
 
     feature_dict = _build_feature_dictionary(user_features)
-    feature_dict.to_csv(cfg.path("feature_dictionary"), index=False)
+    feature_dict.to_csv(cfg.path("feature_dictionary"), index=False, encoding="utf-8")
 
     feasibility = build_feasibility_table()
-    feasibility.to_csv(cfg.path("demographic_feasibility"), index=False)
+    feasibility.to_csv(cfg.path("demographic_feasibility"), index=False, encoding="utf-8")
 
     meta = {
         "n_users": len(user_features),

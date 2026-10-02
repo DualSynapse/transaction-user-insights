@@ -1,4 +1,4 @@
-"""Entry point for the whole pipeline: python main.py [--stage clean|features|report] [--config config.yaml]"""
+"""Entry point for the whole pipeline: python main.py [--stage clean|features|segment|report] [--config config.yaml]"""
 import argparse
 import sys
 import time
@@ -8,7 +8,7 @@ from src.utils.config import load_config
 from src.utils.tools import table_exists
 from src.utils.logger import setup_logger
 
-STAGES = ["clean", "features", "report"]
+STAGES = ["clean", "features", "segment", "report"]
 
 
 def parse_args():
@@ -33,16 +33,29 @@ def run_features(cfg, logger):
     return _run_features(cfg)
 
 
+def run_segment(cfg, logger):
+    if not table_exists(cfg.path("user_features")):
+        logger.error("Missing input: %s. Run the features stage first (python main.py --stage features).",
+                     cfg.path("user_features"))
+        sys.exit(1)
+    from src.segmentation.pipeline import run_segmentation
+    return run_segmentation(cfg)
+
+
 def run_report(cfg, logger):
     if not table_exists(cfg.path("user_features")):
         logger.error("Missing input: %s. Run the features stage first (python main.py --stage features).",
                      cfg.path("user_features"))
         sys.exit(1)
+    if not table_exists(cfg.path("user_segments")):
+        logger.error("Missing input: %s. Run the segment stage first (python main.py --stage segment).",
+                     cfg.path("user_segments"))
+        sys.exit(1)
     from src.reporting.pipeline import run_report as _run_report
     return _run_report(cfg)
 
 
-STAGE_FUNCS = {"clean": run_clean, "features": run_features, "report": run_report}
+STAGE_FUNCS = {"clean": run_clean, "features": run_features, "segment": run_segment, "report": run_report}
 
 
 def main():

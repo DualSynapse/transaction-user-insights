@@ -14,6 +14,48 @@ def _chi2(table: pd.DataFrame) -> dict:
     return {"chi2": float(chi2), "p_value": float(p), "dof": int(dof), "cramers_v": cramers_v}
 
 
+MIN_SEGMENT_N = 10
+
+
+def _rate_by_segment(df: pd.DataFrame, group_col: str, bool_series: pd.Series) -> dict:
+    """{segment: {rate, n}} for a boolean outcome, grouped by segment.
+
+    Segments with fewer than MIN_SEGMENT_N rows still get a rate (it's not hidden), but the
+    count is always reported alongside it so a rate computed on a handful of rows (e.g. the
+    'New / Low Engagement' segment, which by definition has ~0 valid purchases) is never read
+    as if it carried the same weight as a rate from thousands of rows.
+    """
+    tmp = pd.DataFrame({"segment": df[group_col], "value": bool_series})
+    out = {}
+    for seg, g in tmp.groupby("segment"):
+        out[seg] = {"rate": round(float(g["value"].mean()), 4), "n": int(len(g))}
+    return out
+
+
+def segmentation_overview(user_features: pd.DataFrame, segment_meta: dict, figures_dir) -> dict:
+    sizes = user_features["segment_label"].value_counts()
+    value_by_segment = user_features.groupby("segment_label")["avg_net_amount"].mean().reindex(sizes.index)
+
+    size_chart = charts.bar_chart(
+        sizes.index, sizes.values,
+        "Users per segment", "Segment", "Users",
+        "segment_sizes", figures_dir, horizontal=True,
+    )
+    value_chart = charts.bar_chart(
+        value_by_segment.index, value_by_segment.values,
+        "Average net amount per transaction, by segment", "Segment", "Avg. net amount",
+        "segment_value", figures_dir, horizontal=True,
+    )
+
+    return {
+        "selected_k": segment_meta["selected_k"],
+        "k_selection": segment_meta["k_selection"],
+        "segments": segment_meta["segments"],
+        "size_chart": size_chart,
+        "value_chart": value_chart,
+    }
+
+
 def data_audit(transactions: pd.DataFrame, dq_report: dict) -> dict:
     return {
         "n_transactions": len(transactions),
@@ -67,12 +109,19 @@ def q1_repeat_retention_by_region(transactions: pd.DataFrame, cfg: dict, figures
         "q1_repeat_rate_by_city", figures_dir, horizontal=True,
     )
 
+    by_segment = None
+    if "segment_label" in valid.columns:
+        user_segment = valid.drop_duplicates("user_id").set_index("user_id")["segment_label"]
+        repeat_users_seg = repeat_users.assign(segment_label=repeat_users["user_id"].map(user_segment))
+        by_segment = _rate_by_segment(repeat_users_seg, "segment_label", repeat_users_seg["n"] > 1)
+
     return {
         "table": by_city.reset_index().to_dict(orient="records"),
         "march_cohort_retention_by_city": retention_by_city.round(4).to_dict(),
         "chi2_test": test,
         "chart": chart,
         "significant": test["p_value"] < cfg["analysis"]["alpha"],
+        "repeat_rate_by_segment": by_segment,
     }
 
 
@@ -108,6 +157,10 @@ def q2_merchant_repeat_and_promo(transactions: pd.DataFrame, cfg: dict, figures_
         "q2_merchant_repeat_rate", figures_dir, horizontal=True,
     )
 
+    discount_rate_by_segment = None
+    if "segment_label" in valid.columns:
+        discount_rate_by_segment = _rate_by_segment(valid, "segment_label", valid["discount_applied"].fillna(False))
+
     return {
         "n_eligible_merchants": len(eligible),
         "platform_discount_rate": round(float(platform_discount_rate), 4),
@@ -117,6 +170,7 @@ def q2_merchant_repeat_and_promo(transactions: pd.DataFrame, cfg: dict, figures_
         "note": "No promo-source column exists; 'merchant_funded' vs 'platform_baseline' is a heuristic "
                 "flag from a one-sided binomial test of each merchant's discount rate against the "
                 "platform-wide rate, not a ground-truth label.",
+        "discount_rate_by_segment": discount_rate_by_segment,
     }
 
 
@@ -144,11 +198,19 @@ def q3_category_performance(transactions: pd.DataFrame, cfg: dict, figures_dir) 
         "q3_category_volume", figures_dir, horizontal=True,
     )
 
+    dominant_category_by_segment = None
+    if "segment_label" in valid.columns:
+        dominant_category_by_segment = {
+            seg: g["mcc_group"].value_counts(normalize=True).head(2).round(4).to_dict()
+            for seg, g in valid.groupby("segment_label")
+        }
+
     return {
         "table": agg.reset_index().round(2).to_dict(orient="records"),
         "best_selling": agg["n_transactions"].idxmax(),
         "rarely_ordered": agg["n_transactions"].idxmin(),
         "chart": chart,
+        "dominant_category_by_segment": dominant_category_by_segment,
     }
 
 
@@ -175,11 +237,17 @@ def q4_devices_and_os(transactions: pd.DataFrame, cfg: dict, figures_dir) -> dic
         "q4_os_coverage", figures_dir,
     )
 
+    legacy_share_by_segment = None
+    if "segment_label" in transactions.columns:
+        user_legacy = transactions.groupby(["user_id", "segment_label"])["info_legacy_os"].any().reset_index()
+        legacy_share_by_segment = _rate_by_segment(user_legacy, "segment_label", user_legacy["info_legacy_os"])
+
     return {
         "by_os": by_os.reset_index().round(4).to_dict(orient="records"),
         "recommended_min_android_version": recommended_min_version,
         "coverage_target": target,
         "chart": chart,
+        "legacy_share_by_segment": legacy_share_by_segment,
     }
 
 
@@ -213,12 +281,17 @@ def q5_balance_vs_credit_card(transactions: pd.DataFrame, cfg: dict, figures_dir
         "q5_aov_by_method", figures_dir,
     )
 
+    credit_card_share_by_segment = None
+    if "segment_label" in valid.columns:
+        credit_card_share_by_segment = _rate_by_segment(valid, "segment_label", valid["payment_method"] == "credit_card")
+
     return {
         "table": by_method.reset_index().round(2).to_dict(orient="records"),
         "mann_whitney_u": {"u_stat": float(u_stat), "p_value": float(p_value)},
         "significant": p_value < cfg["analysis"]["alpha"],
         "total_mdr_cost": round(float(by_method["mdr_cost"].sum()), 2),
         "chart": chart,
+        "credit_card_share_by_segment": credit_card_share_by_segment,
     }
 
 
@@ -240,11 +313,19 @@ def q6_rating_drivers(transactions: pd.DataFrame, cfg: dict, figures_dir) -> dic
         "q6_rating_by_category", figures_dir, horizontal=True,
     )
 
+    rating_by_segment = None
+    if "segment_label" in ratings.columns:
+        rating_by_segment = {
+            seg: {"mean_rating": round(float(g["merchant_rating_clean"].mean()), 3), "n": int(len(g))}
+            for seg, g in ratings.groupby("segment_label")
+        }
+
     return {
         "mean_rating_by_factor": drivers,
         "refund_notes_crosstab": refund_notes.to_dict(),
         "chi2_test": test,
         "chart": chart,
+        "rating_by_segment": rating_by_segment,
     }
 
 
@@ -278,12 +359,20 @@ def q7_loyalty_and_devices(transactions: pd.DataFrame, user_features: pd.DataFra
         "q7_loyalty_comparison", figures_dir,
     )
 
+    segment_share_members = None
+    segment_share_non_members = None
+    if "segment_label" in user_features.columns:
+        segment_share_members = members["segment_label"].value_counts(normalize=True).round(4).to_dict()
+        segment_share_non_members = non_members["segment_label"].value_counts(normalize=True).round(4).to_dict()
+
     return {
         "comparison": comparison,
         "mann_whitney_u": {"u_stat": float(u_stat), "p_value": float(p_value)},
         "significant": p_value < cfg["analysis"]["alpha"],
         "device_share_top_decile_engaged_users": device_of_engaged.round(4).to_dict(),
         "chart": chart,
+        "segment_share_members": segment_share_members,
+        "segment_share_non_members": segment_share_non_members,
     }
 
 
@@ -303,6 +392,15 @@ def q8_regions_without_promo(transactions: pd.DataFrame, cfg: dict, figures_dir)
         "q8_never_promo_by_city", figures_dir, horizontal=True,
     )
 
+    never_promo_by_segment = None
+    if "segment_label" in valid.columns:
+        user_segment = valid.drop_duplicates("user_id").set_index("user_id")["segment_label"]
+        promo_df = pd.DataFrame({
+            "segment_label": user_segment.reindex(user_used_promo.index),
+            "never_used": ~user_used_promo,
+        })
+        never_promo_by_segment = _rate_by_segment(promo_df, "segment_label", promo_df["never_used"])
+
     return {
         "never_promo_share_by_city": never_promo.round(4).to_dict(),
         "chi2_test": test,
@@ -311,12 +409,148 @@ def q8_regions_without_promo(transactions: pd.DataFrame, cfg: dict, figures_dir)
         "interpretation_note": "A higher never-promo share can reflect promo unavailability, lower price "
                                 "sensitivity, or lower promo awareness in that city; this dataset cannot "
                                 "distinguish between the three without promo-eligibility or exposure data.",
+        "never_promo_share_by_segment": never_promo_by_segment,
     }
 
 
-def run_all_analyses(transactions: pd.DataFrame, user_features: pd.DataFrame, dq_report: dict, cfg: dict, figures_dir) -> dict:
+DEMOGRAPHIC_ATTRIBUTE_MAP = [
+    {"attribute": "Big Five Personality Score", "priority": "1st",
+     "columns": "openness_score, conscientiousness_score, extraversion_score, agreeableness_score, neuroticism_score",
+     "methodology": "Mean z-score of 3-4 signed behavioral indicators per trait, converted to a 0-100 percentile.",
+     "assumption": "Spending behavior reflects personality the way it does in published transaction-based studies "
+                   "(Gladstone, Matz & Lemaire, 2019, Psychological Science); indicator-to-trait direction is "
+                   "this project's own hypothesis, not copied from a validated instrument."},
+    {"attribute": "Gender", "priority": "1st", "columns": "gender_lean_signal, gender_lean_confidence",
+     "methodology": "Composite z-score of spend share in a small set of stereotype-associated retail categories "
+                     "(e.g. beauty/clothing vs. fuel/sporting goods/hardware).",
+     "assumption": "Retail-category stereotypes correlate with gender. This is a weak societal stereotype, not a "
+                    "validated or ethical ground truth — reported as an exploratory 'lean', never an identity claim."},
+    {"attribute": "Age", "priority": "1st", "columns": "age_bracket_estimate, age_bracket_confidence",
+     "methodology": "Reuses the student/parental MCC signals: university spend -> 18-24 bracket; "
+                     "school spend -> 25-45 (parent) bracket; otherwise unknown.",
+     "assumption": "Only users who shop at a university or pay a school-related merchant are age-informative; "
+                    "everyone else is genuinely unknown, not guessed."},
+    {"attribute": "Income Level", "priority": "1st", "columns": "income_proxy_tier",
+     "methodology": "Combines credit-card usage share with the user's percentile rank of average net spend.",
+     "assumption": "Credit-card access and higher average spend both correlate loosely with income."},
+    {"attribute": "Educational Background", "priority": "1st", "columns": "education_signal, education_confidence",
+     "methodology": "Presence of university-category (MCC 8220) spend.",
+     "assumption": "Currently studying at a university is the only educational signal transaction data can "
+                    "support; attained education level (e.g. high-school vs. bachelor's) cannot be inferred."},
+    {"attribute": "Home Location", "priority": "1st", "columns": "home_city_estimate, home_city_confidence",
+     "methodology": "The user's most frequent transaction city overall; confidence scales with how dominant "
+                     "that city is in the user's activity.",
+     "assumption": "A user's most common transaction city approximates where they live."},
+    {"attribute": "Work Location", "priority": "1st", "columns": "work_location_estimate, work_location_confidence",
+     "methodology": "The user's most frequent city on weekdays only, when it differs from the overall "
+                     "(home) dominant city.",
+     "assumption": "No time-of-day field exists (only transaction date), so a weekday/weekend split is used "
+                    "instead of the usual daytime-hours work-cluster approach."},
+    {"attribute": "Working Status", "priority": "2nd", "columns": "working_status_estimate, working_status_confidence",
+     "methodology": "payday_share above a threshold combined with weekend_share below a threshold.",
+     "assumption": "Spending concentrated around common pay dates and weekday-heavy activity loosely suggests "
+                    "regular salaried income; confidence is capped at 'low' because neither input is a direct "
+                    "employment signal."},
+    {"attribute": "Industry of Employment", "priority": "2nd", "columns": "(not estimated)",
+     "methodology": "Attempted: tested whether a user's own spending-category concentration could proxy their "
+                     "employer's industry; rejected as conflating consumption category with employer sector.",
+     "assumption": "No field in this dataset ties a user to an employer or occupation at all."},
+    {"attribute": "Health Status", "priority": "2nd", "columns": "health_care_signal_count, health_care_signal_confidence",
+     "methodology": "Count of pharmacy (MCC 5912) purchases vs. the chance baseline rate for that category.",
+     "assumption": "Pharmacy visits loosely indicate health-related spending; says nothing about condition or severity."},
+    {"attribute": "Homeownership Status", "priority": "2nd", "columns": "homeowner_signal_count, homeowner_signal_confidence",
+     "methodology": "Count of hardware/furniture (MCC 5251, 5712) purchases vs. chance baseline.",
+     "assumption": "Home-improvement spend loosely suggests owning (vs. renting) a home."},
+    {"attribute": "Marital Status", "priority": "2nd", "columns": "marital_family_proxy, marital_family_confidence",
+     "methodology": "Composite: has a parental signal AND is a loyalty member AND has a geographically settled "
+                     "primary city (primary_city_share >= 0.5).",
+     "assumption": "Three independently weak signals stacked together; confidence is capped at 'low' because "
+                    "none of the three is a direct marital-status signal."},
+    {"attribute": "Parental Status", "priority": "2nd", "columns": "parental_signal_count, parental_signal_confidence",
+     "methodology": "Count of school-related (MCC 8211) purchases vs. chance baseline.",
+     "assumption": "Paying a school-related merchant loosely suggests having a school-age child."},
+    {"attribute": "Vehicle ownership", "priority": "2nd", "columns": "vehicle_signal_count, vehicle_signal_confidence",
+     "methodology": "Count of fuel/service-station (MCC 5541) purchases vs. chance baseline.",
+     "assumption": "Buying fuel loosely suggests owning a motor vehicle."},
+]
+
+
+def feature_methodology_summary(user_features: pd.DataFrame) -> dict:
+    """Live-computed stats to ground the Feature Engineering Methodology chapter in real numbers."""
+    rows = []
+    for item in DEMOGRAPHIC_ATTRIBUTE_MAP:
+        conf_cols = [c.strip() for c in item["columns"].split(",") if c.strip().endswith("confidence")]
+        if conf_cols and conf_cols[0] in user_features.columns:
+            conf_col = conf_cols[0]
+            coverage = float((~user_features[conf_col].isin(["none"])).mean())
+            finding = f"{coverage*100:.1f}% of users have a non-'none' confidence signal."
+        elif item["attribute"] == "Big Five Personality Score":
+            finding = "See Cronbach's alpha table below for per-trait reliability."
+        elif item["attribute"] == "Income Level":
+            dist = user_features["income_proxy_tier"].value_counts(normalize=True)
+            finding = ", ".join(f"{k}: {v*100:.1f}%" for k, v in dist.items())
+        else:
+            finding = "Not estimated — see methodology column."
+        rows.append({**item, "finding": finding})
+
+    return {
+        "attribute_table": rows,
+        "activity": {
+            "median_active_months": float(user_features["active_months"].median()),
+            "median_tenure_days": float(user_features["tenure_days"].median()),
+            "median_burstiness": float(user_features["burstiness"].median()),
+        },
+        "value": {
+            "median_avg_net_amount": float(user_features["avg_net_amount"].median()),
+            "median_cv_net_amount": float(user_features["cv_net_amount"].median()),
+        },
+        "category": {
+            "median_category_entropy": float(user_features["category_entropy"].median()),
+            "median_merchant_repeat_ratio": float(user_features["merchant_repeat_ratio"].median()),
+        },
+        "geography": {
+            "multi_city_share": float(user_features["is_multi_city"].mean()),
+            "median_primary_city_share": float(user_features["primary_city_share"].median()),
+        },
+        "payment": {
+            "credit_card_only_share": float((user_features["payment_profile"] == "credit_card_only").mean()),
+            "balance_only_share": float((user_features["payment_profile"] == "balance_only").mean()),
+            "promo_user_share": float(user_features["is_promo_user"].mean()),
+        },
+        "quality": {
+            "median_failure_rate": float(user_features["failure_rate"].median()),
+            "median_refund_rate": float(user_features["refund_rate"].median()),
+        },
+        "time": {
+            "median_weekend_share": float(user_features["weekend_share"].median()),
+            "median_payday_share": float(user_features["payday_share"].median()),
+        },
+        "device": {
+            "android_share": float((user_features["os_family"] == "Android").mean()),
+            "legacy_os_share": float(user_features["is_legacy_os"].mean()),
+        },
+        # Global rates of each "positive" demographic signal value, used to compute how much a
+        # segment over-indexes on it (segment_rate / global_rate) for the persona story — raw
+        # top-category would just show the majority "no_signal"/"unknown" value everywhere,
+        # since most of these proxies are weak and rare.
+        "demographic_global_rates": {
+            "likely_in_tertiary_education": float((user_features["education_signal"] == "likely_in_tertiary_education").mean()),
+            "likely_employed_regular_income": float((user_features["working_status_estimate"] == "likely_employed_regular_income").mean()),
+            "family_proxy_likely": float((user_features["marital_family_proxy"] == "family_proxy_likely").mean()),
+            "female_lean": float((user_features["gender_lean_signal"] == "female_lean").mean()),
+            "male_lean": float((user_features["gender_lean_signal"] == "male_lean").mean()),
+            "18-24 (student-leaning)": float((user_features["age_bracket_estimate"] == "18-24 (student-leaning)").mean()),
+            "25-45 (parent-leaning)": float((user_features["age_bracket_estimate"] == "25-45 (parent-leaning)").mean()),
+        },
+    }
+
+
+def run_all_analyses(transactions: pd.DataFrame, user_features: pd.DataFrame, dq_report: dict,
+                      segment_meta: dict, cfg: dict, figures_dir) -> dict:
     return {
         "audit": data_audit(transactions, dq_report),
+        "feature_methodology": feature_methodology_summary(user_features),
+        "segmentation": segmentation_overview(user_features, segment_meta, figures_dir),
         "daily_volume_chart": charts.daily_volume_chart(transactions, cfg, figures_dir),
         "region_map_chart": charts.region_map_chart(transactions, figures_dir),
         "q1": q1_repeat_retention_by_region(transactions, cfg, figures_dir),

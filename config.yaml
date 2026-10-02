@@ -16,6 +16,10 @@ paths:
   demographic_feasibility: data/processed/demographic_feasibility.csv
   feature_meta: data/processed/feature_meta.json
 
+  user_segments: data/processed/user_segments.parquet
+  segment_profiles: data/processed/segment_profiles.json
+  segment_model: data/processed/segmentation_model.joblib
+
   report_pdf: outputs/reports/transaction_insights_report.pdf
   analysis_results: outputs/reports/analysis_results.json
 
@@ -83,6 +87,52 @@ analysis:
   min_users_per_merchant: 20
   os_coverage_target: 0.90
 
+segmentation:
+  random_state: 42
+  k_min: 3
+  k_max: 6
+  # Monetary features are log1p-transformed before scaling (right-skewed).
+  log_features: ["avg_net_amount"]
+  features:
+    - recency_days
+    - active_months
+    - n_valid_purchases
+    - avg_net_amount
+    - cv_net_amount
+    - category_entropy
+    - merchant_diversity
+    - merchant_repeat_ratio
+    - discount_tx_share
+    - credit_card_share
+    - failure_rate
+    - refund_rate
+    - weekend_share
+    - lebaran_lift
+    - loyalty_member
+  # Features used only to profile/describe segments after they are formed, never to form them.
+  profiling_features:
+    - total_net_amount
+    - primary_city
+    - primary_province
+    - primary_region_group
+    - payment_profile
+    - os_family
+    - is_legacy_os
+    - is_promo_user
+    - avg_rating
+    - openness_score
+    - conscientiousness_score
+    - extraversion_score
+    - agreeableness_score
+    - neuroticism_score
+    - income_proxy_tier
+    - gender_lean_signal
+    - age_bracket_estimate
+    - education_signal
+    - work_location_estimate
+    - working_status_estimate
+    - marital_family_proxy
+
 mcc:
   "4722": {description: "Travel Agencies", group: "Travel"}
   "5251": {description: "Hardware Stores", group: "Home"}
@@ -108,3 +158,24 @@ mcc:
 
 mcc_social: ["5812", "5814", "7994"]
 mcc_essential: ["5411", "5912"]
+
+demographics:
+  # Exploratory, weak-signal proxies for demographic attributes that have no direct field
+  # in this dataset. All are reported with a confidence tier and are documented as
+  # heuristics, not validated predictions.
+  gender_lean:
+    # Based on common retail-category stereotypes, NOT biological or social fact. Used only
+    # as an exploratory segmentation input; output is a "lean" score with mostly low/none
+    # confidence, never a claimed identity. Flagged explicitly in the report as an ethical
+    # caution point.
+    female_lean_mcc: ["7230", "5651"]   # Beauty/Barber Shops, Family Clothing Stores
+    male_lean_mcc: ["5541", "5941", "5251", "7994"]  # Fuel, Sporting Goods, Hardware, Arcades
+  working_status:
+    min_valid_purchases: 5
+    payday_share_threshold: 0.3
+    weekend_share_max: 0.5
+  marital_family_proxy:
+    # Geo per transaction is scattered across cities for most users in this dataset (median
+    # primary_city_share is exactly 0.5), so a strict "single city only" rule leaves almost
+    # no one eligible. Use a share threshold instead of requiring zero multi-city activity.
+    min_primary_city_share: 0.5

@@ -64,11 +64,17 @@ def sample_project(tmp_path):
     cfg["paths"]["feature_dictionary"] = str(tmp_path / "processed_dir" / "feature_dictionary.csv")
     cfg["paths"]["demographic_feasibility"] = str(tmp_path / "processed_dir" / "demographic_feasibility.csv")
     cfg["paths"]["feature_meta"] = str(tmp_path / "processed_dir" / "feature_meta.json")
+    cfg["paths"]["user_segments"] = str(tmp_path / "processed_dir" / "user_segments.parquet")
+    cfg["paths"]["segment_profiles"] = str(tmp_path / "processed_dir" / "segment_profiles.json")
+    cfg["paths"]["segment_model"] = str(tmp_path / "processed_dir" / "segmentation_model.joblib")
     cfg["paths"]["report_pdf"] = str(tmp_path / "reports_dir" / "transaction_insights_report.pdf")
     cfg["paths"]["analysis_results"] = str(tmp_path / "reports_dir" / "analysis_results.json")
     # reuse the already-cached boundary file so the test doesn't need network access
     cfg["paths"]["external_dir"] = str(PROJECT_ROOT / "data" / "external")
     cfg["analysis"]["min_users_per_merchant"] = 1
+    # the synthetic fixture only has 10 users; keep k below that so KMeans/silhouette stay well-defined
+    cfg["segmentation"]["k_min"] = 2
+    cfg["segmentation"]["k_max"] = 3
 
     config_path = tmp_path / "config.yaml"
     with open(config_path, "w", encoding="utf-8") as f:

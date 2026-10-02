@@ -1,0 +1,218 @@
+{
+  "n_transactions": 278932,
+  "n_users": 24321,
+  "n_merchants": 6489,
+  "n_mcc_categories": 21,
+  "date_range": [
+    "2024-03-01 00:00:00",
+    "2024-05-31 00:00:00"
+  ],
+  "missing_audit": {
+    "n_rows": 278932,
+    "n_columns": 17,
+    "columns": {
+      "transaction_id": {
+        "n_nan": 0,
+        "n_hidden_missing_token": 0,
+        "n_whitespace_padded": 0,
+        "n_missing_total": 0,
+        "pct_missing_total": 0.0
+      },
+      "user_id": {
+        "n_nan": 0,
+        "n_hidden_missing_token": 0,
+        "n_whitespace_padded": 0,
+        "n_missing_total": 0,
+        "pct_missing_total": 0.0
+      },
+      "transaction_amount": {
+        "n_nan": 0,
+        "n_hidden_missing_token": 0,
+        "n_whitespace_padded": 0,
+        "n_missing_total": 0,
+        "pct_missing_total": 0.0
+      },
+      "transaction_date": {
+        "n_nan": 0,
+        "n_hidden_missing_token": 0,
+        "n_whitespace_padded": 0,
+        "n_missing_total": 0,
+        "pct_missing_total": 0.0
+      },
+      "merchant_id": {
+        "n_nan": 0,
+        "n_hidden_missing_token": 0,
+        "n_whitespace_padded": 0,
+        "n_missing_total": 0,
+        "pct_missing_total": 0.0
+      },
+      "merchant_name": {
+        "n_nan": 0,
+        "n_hidden_missing_token": 0,
+        "n_whitespace_padded": 0,
+        "n_missing_total": 0,
+        "pct_missing_total": 0.0
+      },
+      "merchant_category_id": {
+        "n_nan": 0,
+        "n_hidden_missing_token": 0,
+        "n_whitespace_padded": 0,
+        "n_missing_total": 0,
+        "pct_missing_total": 0.0
+      },
+      "geo_location": {
+        "n_nan": 0,
+        "n_hidden_missing_token": 0,
+        "n_whitespace_padded": 0,
+        "n_missing_total": 0,
+        "pct_missing_total": 0.0
+      },
+      "payment_method": {
+        "n_nan": 0,
+        "n_hidden_missing_token": 0,
+        "n_whitespace_padded": 0,
+        "n_missing_total": 0,
+        "pct_missing_total": 0.0
+      },
+      "user_agent": {
+        "n_nan": 0,
+        "n_hidden_missing_token": 0,
+        "n_whitespace_padded": 0,
+        "n_missing_total": 0,
+        "pct_missing_total": 0.0
+      },
+      "loyalty_program": {
+        "n_nan": 0,
+        "n_hidden_missing_token": 93584,
+        "n_whitespace_padded": 0,
+        "n_missing_total": 93584,
+        "pct_missing_total": 33.551
+      },
+      "discount_applied": {
+        "n_nan": 0,
+        "n_hidden_missing_token": 93584,
+        "n_whitespace_padded": 0,
+        "n_missing_total": 93584,
+        "pct_missing_total": 33.551
+      },
+      "promo_amount": {
+        "n_nan": 0,
+        "n_hidden_missing_token": 93584,
+        "n_whitespace_padded": 0,
+        "n_missing_total": 93584,
+        "pct_missing_total": 33.551
+      },
+      "transaction_notes": {
+        "n_nan": 0,
+        "n_hidden_missing_token": 93584,
+        "n_whitespace_padded": 0,
+        "n_missing_total": 93584,
+        "pct_missing_total": 33.551
+      },
+      "merchant_rating": {
+        "n_nan": 0,
+        "n_hidden_missing_token": 93584,
+        "n_whitespace_padded": 0,
+        "n_missing_total": 93584,
+        "pct_missing_total": 33.551
+      },
+      "transaction_status": {
+        "n_nan": 0,
+        "n_hidden_missing_token": 93584,
+        "n_whitespace_padded": 0,
+        "n_missing_total": 93584,
+        "pct_missing_total": 33.551
+      },
+      "is_refunded": {
+        "n_nan": 0,
+        "n_hidden_missing_token": 93584,
+        "n_whitespace_padded": 0,
+        "n_missing_total": 93584,
+        "pct_missing_total": 33.551
+      }
+    }
+  },
+  "transaction_status_breakdown": {
+    "completed": 175955,
+    "pending": 93584,
+    "failed": 9393
+  },
+  "dq_flag_counts": {
+    "dq_bad_date": 0,
+    "dq_invalid_payment_method": 0,
+    "dq_invalid_transaction_status": 0,
+    "dq_invalid_loyalty_program": 0,
+    "dq_invalid_discount_applied": 0,
+    "dq_invalid_transaction_notes": 0,
+    "dq_invalid_is_refunded": 0,
+    "dq_duplicate_transaction_id": 0,
+    "dq_amount_nonpositive": 0,
+    "dq_promo_negative": 0,
+    "dq_promo_exceeds_amount": 0,
+    "dq_rating_out_of_range": 0,
+    "dq_rating_on_non_completed": 9393,
+    "dq_refund_on_non_completed": 469,
+    "dq_discount_zero_promo": 146,
+    "dq_any_issue": 9531,
+    "dq_geo_unparseable": 0,
+    "dq_geo_outside_indonesia": 0,
+    "dq_geo_unmatched": 0
+  },
+  "n_any_dq_issue": 9531,
+  "geo_match_method_counts": {
+    "within": 278932
+  },
+  "geo_match_coverage_pct": 100.0,
+  "province_regency_counts": [
+    {
+      "province": "DKI Jakarta",
+      "city": "Kota Jakarta Pusat",
+      "count": 72992
+    },
+    {
+      "province": "Jawa Timur",
+      "city": "Kota Surabaya",
+      "count": 38896
+    },
+    {
+      "province": "Banten",
+      "city": "Kota Tangerang",
+      "count": 28826
+    },
+    {
+      "province": "Jawa Barat",
+      "city": "Kota Depok",
+      "count": 27289
+    },
+    {
+      "province": "Jawa Barat",
+      "city": "Kota Bekasi",
+      "count": 27244
+    },
+    {
+      "province": "Jawa Barat",
+      "city": "Kota Bogor",
+      "count": 25697
+    },
+    {
+      "province": "DI Yogyakarta",
+      "city": "Kabupaten Bantul",
+      "count": 24518
+    },
+    {
+      "province": "Jawa Timur",
+      "city": "Kota Malang",
+      "count": 16877
+    },
+    {
+      "province": "Jawa Tengah",
+      "city": "Kota Semarang",
+      "count": 16592
+    },
+    {
+      "province": "DKI Jakarta",
+      "city": "Kota Jakarta Selatan",
+      "count": 1
+    }
+  ]
+}

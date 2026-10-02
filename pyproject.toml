@@ -1,7 +1,7 @@
 [project]
 name = "transaction-user-insights"
 version = "0.1.0"
-description = "Cleans raw transaction data, builds a per-user feature table, and generates an automated PDF insights report."
+description = "Cleans raw transaction data, builds a per-user feature table with behavioral segmentation, and generates an automated PDF insights report."
 requires-python = ">=3.11"
 dependencies = [
     "pandas>=2.0",
@@ -13,11 +13,15 @@ dependencies = [
     "scipy>=1.10",
     "matplotlib>=3.7",
     "reportlab>=4.0",
+    "scikit-learn>=1.3",
+    "joblib>=1.3",
 ]
 
 [dependency-groups]
 dev = [
     "pytest>=7",
+    "jupyter>=1.0",
+    "seaborn>=0.13",
 ]
 
 [tool.uv]

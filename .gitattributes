@@ -1,0 +1,7 @@
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.parquet binary
+*.joblib binary
+*.csv.gz binary

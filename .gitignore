@@ -4,10 +4,11 @@ __pycache__/
 
 data/interim/
 data/processed/
-outputs/
+outputs/logs/
 
 *.egg-info/
 .venv/
 venv/
 
 IMPLEMENTATION_PLAN*.md
+Data Scientist - Take Home Test.pdf

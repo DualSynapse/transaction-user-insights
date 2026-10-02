@@ -1,0 +1,1178 @@
+{
+  "audit": {
+    "n_transactions": 278932,
+    "n_users": 24321,
+    "n_merchants": 6489,
+    "n_mcc_categories": 21,
+    "date_range": [
+      "2024-03-01 00:00:00",
+      "2024-05-31 00:00:00"
+    ],
+    "status_breakdown": {
+      "completed": 175955,
+      "pending": 93584,
+      "failed": 9393
+    },
+    "dq_flag_counts": {
+      "dq_bad_date": 0,
+      "dq_invalid_payment_method": 0,
+      "dq_invalid_transaction_status": 0,
+      "dq_invalid_loyalty_program": 0,
+      "dq_invalid_discount_applied": 0,
+      "dq_invalid_transaction_notes": 0,
+      "dq_invalid_is_refunded": 0,
+      "dq_duplicate_transaction_id": 0,
+      "dq_amount_nonpositive": 0,
+      "dq_promo_negative": 0,
+      "dq_promo_exceeds_amount": 0,
+      "dq_rating_out_of_range": 0,
+      "dq_rating_on_non_completed": 9393,
+      "dq_refund_on_non_completed": 469,
+      "dq_discount_zero_promo": 146,
+      "dq_any_issue": 9531,
+      "dq_geo_unparseable": 0,
+      "dq_geo_outside_indonesia": 0,
+      "dq_geo_unmatched": 0
+    },
+    "geo_match_coverage_pct": 100.0,
+    "limitations": [
+      "Data is synthetic: 93,584 transactions (33.6%) have a blank status (neither completed nor failed) and correspondingly blank rating/refund/discount/notes/loyalty fields; these are treated as a third 'pending' category rather than as errors.",
+      "100% of transactions with a rating are on failed transactions (9,393 of 9,393 failed transactions carry a rating) — the opposite of what would be expected operationally, and a sign the rating and status fields were generated independently.",
+      "The administrative boundary file (GADM, 394 regencies/cities) predates several splits; there are 514 regencies/cities today. This has no effect on the 9 cities present in this dataset.",
+      "No promo-source column exists, so merchant- vs platform-funded discounts are inferred heuristically from each merchant's discount rate vs. the platform baseline."
+    ]
+  },
+  "feature_methodology": {
+    "attribute_table": [
+      {
+        "attribute": "Big Five Personality Score",
+        "priority": "1st",
+        "columns": "openness_score, conscientiousness_score, extraversion_score, agreeableness_score, neuroticism_score",
+        "methodology": "Mean z-score of 3-4 signed behavioral indicators per trait, converted to a 0-100 percentile.",
+        "assumption": "Spending behavior reflects personality the way it does in published transaction-based studies (Gladstone, Matz & Lemaire, 2019, Psychological Science); indicator-to-trait direction is this project's own hypothesis, not copied from a validated instrument.",
+        "finding": "See Cronbach's alpha table below for per-trait reliability."
+      },
+      {
+        "attribute": "Gender",
+        "priority": "1st",
+        "columns": "gender_lean_signal, gender_lean_confidence",
+        "methodology": "Composite z-score of spend share in a small set of stereotype-associated retail categories (e.g. beauty/clothing vs. fuel/sporting goods/hardware).",
+        "assumption": "Retail-category stereotypes correlate with gender. This is a weak societal stereotype, not a validated or ethical ground truth — reported as an exploratory 'lean', never an identity claim.",
+        "finding": "29.5% of users have a non-'none' confidence signal."
+      },
+      {
+        "attribute": "Age",
+        "priority": "1st",
+        "columns": "age_bracket_estimate, age_bracket_confidence",
+        "methodology": "Reuses the student/parental MCC signals: university spend -> 18-24 bracket; school spend -> 25-45 (parent) bracket; otherwise unknown.",
+        "assumption": "Only users who shop at a university or pay a school-related merchant are age-informative; everyone else is genuinely unknown, not guessed.",
+        "finding": "12.0% of users have a non-'none' confidence signal."
+      },
+      {
+        "attribute": "Income Level",
+        "priority": "1st",
+        "columns": "income_proxy_tier",
+        "methodology": "Combines credit-card usage share with the user's percentile rank of average net spend.",
+        "assumption": "Credit-card access and higher average spend both correlate loosely with income.",
+        "finding": "medium: 96.1%, low: 3.5%, high: 0.4%"
+      },
+      {
+        "attribute": "Educational Background",
+        "priority": "1st",
+        "columns": "education_signal, education_confidence",
+        "methodology": "Presence of university-category (MCC 8220) spend.",
+        "assumption": "Currently studying at a university is the only educational signal transaction data can support; attained education level (e.g. high-school vs. bachelor's) cannot be inferred.",
+        "finding": "5.9% of users have a non-'none' confidence signal."
+      },
+      {
+        "attribute": "Home Location",
+        "priority": "1st",
+        "columns": "home_city_estimate, home_city_confidence",
+        "methodology": "The user's most frequent transaction city overall; confidence scales with how dominant that city is in the user's activity.",
+        "assumption": "A user's most common transaction city approximates where they live.",
+        "finding": "100.0% of users have a non-'none' confidence signal."
+      },
+      {
+        "attribute": "Work Location",
+        "priority": "1st",
+        "columns": "work_location_estimate, work_location_confidence",
+        "methodology": "The user's most frequent city on weekdays only, when it differs from the overall (home) dominant city.",
+        "assumption": "No time-of-day field exists (only transaction date), so a weekday/weekend split is used instead of the usual daytime-hours work-cluster approach.",
+        "finding": "66.7% of users have a non-'none' confidence signal."
+      },
+      {
+        "attribute": "Working Status",
+        "priority": "2nd",
+        "columns": "working_status_estimate, working_status_confidence",
+        "methodology": "payday_share above a threshold combined with weekend_share below a threshold.",
+        "assumption": "Spending concentrated around common pay dates and weekday-heavy activity loosely suggests regular salaried income; confidence is capped at 'low' because neither input is a direct employment signal.",
+        "finding": "27.4% of users have a non-'none' confidence signal."
+      },
+      {
+        "attribute": "Industry of Employment",
+        "priority": "2nd",
+        "columns": "(not estimated)",
+        "methodology": "Attempted: tested whether a user's own spending-category concentration could proxy their employer's industry; rejected as conflating consumption category with employer sector.",
+        "assumption": "No field in this dataset ties a user to an employer or occupation at all.",
+        "finding": "Not estimated — see methodology column."
+      },
+      {
+        "attribute": "Health Status",
+        "priority": "2nd",
+        "columns": "health_care_signal_count, health_care_signal_confidence",
+        "methodology": "Count of pharmacy (MCC 5912) purchases vs. the chance baseline rate for that category.",
+        "assumption": "Pharmacy visits loosely indicate health-related spending; says nothing about condition or severity.",
+        "finding": "41.9% of users have a non-'none' confidence signal."
+      },
+      {
+        "attribute": "Homeownership Status",
+        "priority": "2nd",
+        "columns": "homeowner_signal_count, homeowner_signal_confidence",
+        "methodology": "Count of hardware/furniture (MCC 5251, 5712) purchases vs. chance baseline.",
+        "assumption": "Home-improvement spend loosely suggests owning (vs. renting) a home.",
+        "finding": "26.5% of users have a non-'none' confidence signal."
+      },
+      {
+        "attribute": "Marital Status",
+        "priority": "2nd",
+        "columns": "marital_family_proxy, marital_family_confidence",
+        "methodology": "Composite: has a parental signal AND is a loyalty member AND has a geographically settled primary city (primary_city_share >= 0.5).",
+        "assumption": "Three independently weak signals stacked together; confidence is capped at 'low' because none of the three is a direct marital-status signal.",
+        "finding": "0.9% of users have a non-'none' confidence signal."
+      },
+      {
+        "attribute": "Parental Status",
+        "priority": "2nd",
+        "columns": "parental_signal_count, parental_signal_confidence",
+        "methodology": "Count of school-related (MCC 8211) purchases vs. chance baseline.",
+        "assumption": "Paying a school-related merchant loosely suggests having a school-age child.",
+        "finding": "6.8% of users have a non-'none' confidence signal."
+      },
+      {
+        "attribute": "Vehicle ownership",
+        "priority": "2nd",
+        "columns": "vehicle_signal_count, vehicle_signal_confidence",
+        "methodology": "Count of fuel/service-station (MCC 5541) purchases vs. chance baseline.",
+        "assumption": "Buying fuel loosely suggests owning a motor vehicle.",
+        "finding": "25.5% of users have a non-'none' confidence signal."
+      }
+    ],
+    "activity": {
+      "median_active_months": 3.0,
+      "median_tenure_days": 77.0,
+      "median_burstiness": -0.07025385684264171
+    },
+    "value": {
+      "median_avg_net_amount": 34627.27272727273,
+      "median_cv_net_amount": 0.7944236461400795
+    },
+    "category": {
+      "median_category_entropy": 1.5607104090414063,
+      "median_merchant_repeat_ratio": 0.0
+    },
+    "geography": {
+      "multi_city_share": 0.9913243698861066,
+      "median_primary_city_share": 0.5
+    },
+    "payment": {
+      "credit_card_only_share": 0.0002055836519879939,
+      "balance_only_share": 0.10081822293491222,
+      "promo_user_share": 0.5459479462193166
+    },
+    "quality": {
+      "median_failure_rate": 0.0,
+      "median_refund_rate": 0.0
+    },
+    "time": {
+      "median_weekend_share": 0.18181818181818182,
+      "median_payday_share": 0.18181818181818182
+    },
+    "device": {
+      "android_share": 0.6644463632251963,
+      "legacy_os_share": 0.5743184901936598
+    },
+    "demographic_global_rates": {
+      "likely_in_tertiary_education": 0.05896139139015665,
+      "likely_employed_regular_income": 0.2740018913695983,
+      "family_proxy_likely": 0.009333497800254924,
+      "female_lean": 0.674519962172608,
+      "male_lean": 0.325480037827392,
+      "18-24 (student-leaning)": 0.05250606471773365,
+      "25-45 (parent-leaning)": 0.0675959047736524
+    }
+  },
+  "segmentation": {
+    "selected_k": 5,
+    "k_selection": {
+      "3": {
+        "inertia": 194720.33007757345,
+        "silhouette": 0.3477544820903191
+      },
+      "4": {
+        "inertia": 176328.60569979687,
+        "silhouette": 0.3576653397064951
+      },
+      "5": {
+        "inertia": 155397.733560823,
+        "silhouette": 0.36575724273382804
+      },
+      "6": {
+        "inertia": 145104.39397961984,
+        "silhouette": 0.3234296946845917
+      }
+    },
+    "segments": {
+      "0": {
+        "segment_id": 0,
+        "label": "Bargain Hunters",
+        "n_users": 11134,
+        "share_of_users": 0.4578,
+        "feature_means": {
+          "recency_days": 7.4869,
+          "active_months": 3.0,
+          "n_valid_purchases": 10.5456,
+          "avg_net_amount": 45866.9125,
+          "cv_net_amount": 0.9694,
+          "category_entropy": 1.7607,
+          "merchant_diversity": 2.3097,
+          "merchant_repeat_ratio": 0.0,
+          "discount_tx_share": 0.1704,
+          "credit_card_share": 0.2011,
+          "failure_rate": 0.0509,
+          "refund_rate": 0.0506,
+          "weekend_share": 0.2831,
+          "lebaran_lift": 2.1168,
+          "loyalty_member": 0.0
+        },
+        "profiling_means": {
+          "total_net_amount": 484098.1768,
+          "is_legacy_os": 0.8651,
+          "is_promo_user": 0.8282,
+          "avg_rating": 3.8028,
+          "openness_score": 67.948,
+          "conscientiousness_score": 43.9842,
+          "extraversion_score": 66.3125,
+          "agreeableness_score": 37.1961,
+          "neuroticism_score": 66.9226
+        },
+        "top_categories": {
+          "primary_city": {
+            "Kota Jakarta Pusat": 0.4729,
+            "Kota Surabaya": 0.1868,
+            "Kabupaten Bantul": 0.108
+          },
+          "primary_province": {
+            "Jawa Barat": 0.3549,
+            "DKI Jakarta": 0.2791,
+            "Jawa Timur": 0.2023
+          },
+          "primary_region_group": {
+            "Jabodetabek": 0.6555,
+            "East Java": 0.2023,
+            "Central Java & DIY": 0.1423
+          },
+          "payment_profile": {
+            "mixed": 0.9055,
+            "balance_only": 0.0945
+          },
+          "os_family": {
+            "Android": 1.0
+          },
+          "income_proxy_tier": {
+            "medium": 0.9945,
+            "high": 0.0055
+          },
+          "gender_lean_signal": {
+            "female_lean": 0.5084,
+            "male_lean": 0.4916
+          },
+          "age_bracket_estimate": {
+            "unknown_adult": 0.8128,
+            "25-45 (parent-leaning)": 0.1052,
+            "18-24 (student-leaning)": 0.082
+          },
+          "education_signal": {
+            "no_signal": 0.9075,
+            "likely_in_tertiary_education": 0.0925
+          },
+          "work_location_estimate": {
+            "Kota Jakarta Pusat": 0.4034,
+            "Kota Surabaya": 0.1753,
+            "Kabupaten Bantul": 0.1035
+          },
+          "working_status_estimate": {
+            "irregular_or_unknown": 0.564,
+            "likely_employed_regular_income": 0.4211,
+            "insufficient_signal": 0.0148
+          },
+          "marital_family_proxy": {
+            "no_signal": 1.0
+          }
+        }
+      },
+      "1": {
+        "segment_id": 1,
+        "label": "New / Low Engagement",
+        "n_users": 7871,
+        "share_of_users": 0.3236,
+        "feature_means": {
+          "recency_days": 7.4487,
+          "active_months": 2.9579,
+          "n_valid_purchases": 0.0005,
+          "avg_net_amount": 2.6521,
+          "cv_net_amount": 0.0001,
+          "category_entropy": 0.0001,
+          "merchant_diversity": 0.0002,
+          "merchant_repeat_ratio": 0.0,
+          "discount_tx_share": 0.0,
+          "credit_card_share": 0.2,
+          "failure_rate": 0.0,
+          "refund_rate": 0.0,
+          "weekend_share": 0.0,
+          "lebaran_lift": 0.0,
+          "loyalty_member": 0.0
+        },
+        "profiling_means": {
+          "total_net_amount": 10.6086,
+          "is_legacy_os": 0.0,
+          "is_promo_user": 0.0,
+          "avg_rating": 3.5,
+          "openness_score": 16.782,
+          "conscientiousness_score": 61.3986,
+          "extraversion_score": 19.0693,
+          "agreeableness_score": 72.5779,
+          "neuroticism_score": 16.7827
+        },
+        "top_categories": {
+          "primary_city": {
+            "Kota Jakarta Pusat": 0.4689,
+            "Kota Surabaya": 0.1753,
+            "Kabupaten Bantul": 0.1057
+          },
+          "primary_province": {
+            "Jawa Barat": 0.3588,
+            "DKI Jakarta": 0.282,
+            "Jawa Timur": 0.1934
+          },
+          "primary_region_group": {
+            "Jabodetabek": 0.6615,
+            "East Java": 0.1934,
+            "Central Java & DIY": 0.1451
+          },
+          "payment_profile": {
+            "mixed": 0.8993,
+            "balance_only": 0.1007
+          },
+          "os_family": {
+            "iOS": 0.9999,
+            "Android": 0.0001
+          },
+          "income_proxy_tier": {
+            "medium": 0.8994,
+            "low": 0.1006
+          },
+          "gender_lean_signal": {
+            "female_lean": 0.9999,
+            "male_lean": 0.0001
+          },
+          "age_bracket_estimate": {
+            "unknown_adult": 1.0
+          },
+          "education_signal": {
+            "no_signal": 1.0
+          },
+          "work_location_estimate": {
+            "Kota Jakarta Pusat": 0.4689,
+            "Kota Surabaya": 0.1753,
+            "Kabupaten Bantul": 0.1057
+          },
+          "working_status_estimate": {
+            "insufficient_signal": 1.0
+          },
+          "marital_family_proxy": {
+            "no_signal": 1.0
+          }
+        }
+      },
+      "2": {
+        "segment_id": 2,
+        "label": "Champions (High-Value Loyal)",
+        "n_users": 373,
+        "share_of_users": 0.0153,
+        "feature_means": {
+          "recency_days": 7.0858,
+          "active_months": 2.9678,
+          "n_valid_purchases": 12.2869,
+          "avg_net_amount": 45460.6346,
+          "cv_net_amount": 1.0022,
+          "category_entropy": 1.7613,
+          "merchant_diversity": 2.3437,
+          "merchant_repeat_ratio": 0.0903,
+          "discount_tx_share": 0.1744,
+          "credit_card_share": 0.2012,
+          "failure_rate": 0.048,
+          "refund_rate": 0.039,
+          "weekend_share": 0.2768,
+          "lebaran_lift": 2.1593,
+          "loyalty_member": 0.2279
+        },
+        "profiling_means": {
+          "total_net_amount": 559220.6434,
+          "is_legacy_os": 0.8338,
+          "is_promo_user": 0.8928,
+          "avg_rating": 3.8191,
+          "openness_score": 69.5828,
+          "conscientiousness_score": 40.4427,
+          "extraversion_score": 58.0817,
+          "agreeableness_score": 99.1962,
+          "neuroticism_score": 65.0411
+        },
+        "top_categories": {
+          "primary_city": {
+            "Kota Surabaya": 0.319,
+            "Kota Jakarta Pusat": 0.2654,
+            "Kabupaten Bantul": 0.2386
+          },
+          "primary_province": {
+            "Jawa Timur": 0.3351,
+            "DI Yogyakarta": 0.2386,
+            "Jawa Barat": 0.1903
+          },
+          "primary_region_group": {
+            "Jabodetabek": 0.3485,
+            "East Java": 0.3351,
+            "Central Java & DIY": 0.3164
+          },
+          "payment_profile": {
+            "mixed": 0.9464,
+            "balance_only": 0.0536
+          },
+          "os_family": {
+            "Android": 1.0
+          },
+          "income_proxy_tier": {
+            "medium": 1.0
+          },
+          "gender_lean_signal": {
+            "male_lean": 0.5496,
+            "female_lean": 0.4504
+          },
+          "age_bracket_estimate": {
+            "unknown_adult": 0.8123,
+            "25-45 (parent-leaning)": 0.1072,
+            "18-24 (student-leaning)": 0.0804
+          },
+          "education_signal": {
+            "no_signal": 0.9115,
+            "likely_in_tertiary_education": 0.0885
+          },
+          "work_location_estimate": {
+            "Kota Surabaya": 0.2976,
+            "Kota Jakarta Pusat": 0.2279,
+            "Kabupaten Bantul": 0.2172
+          },
+          "working_status_estimate": {
+            "irregular_or_unknown": 0.5979,
+            "likely_employed_regular_income": 0.3968,
+            "insufficient_signal": 0.0054
+          },
+          "marital_family_proxy": {
+            "no_signal": 0.9839,
+            "family_proxy_likely": 0.0161
+          }
+        }
+      },
+      "3": {
+        "segment_id": 3,
+        "label": "Regular / Steady Spenders",
+        "n_users": 3574,
+        "share_of_users": 0.147,
+        "feature_means": {
+          "recency_days": 7.3481,
+          "active_months": 2.9944,
+          "n_valid_purchases": 10.4597,
+          "avg_net_amount": 45942.2479,
+          "cv_net_amount": 0.9709,
+          "category_entropy": 1.7606,
+          "merchant_diversity": 2.3014,
+          "merchant_repeat_ratio": 0.0,
+          "discount_tx_share": 0.1689,
+          "credit_card_share": 0.2035,
+          "failure_rate": 0.0496,
+          "refund_rate": 0.0524,
+          "weekend_share": 0.2823,
+          "lebaran_lift": 2.097,
+          "loyalty_member": 1.0
+        },
+        "profiling_means": {
+          "total_net_amount": 480837.5769,
+          "is_legacy_os": 0.864,
+          "is_promo_user": 0.8324,
+          "avg_rating": 3.7856,
+          "openness_score": 67.7594,
+          "conscientiousness_score": 44.5942,
+          "extraversion_score": 66.009,
+          "agreeableness_score": 36.2561,
+          "neuroticism_score": 67.5068
+        },
+        "top_categories": {
+          "primary_city": {
+            "Kota Jakarta Pusat": 0.4703,
+            "Kota Surabaya": 0.1799,
+            "Kabupaten Bantul": 0.1142
+          },
+          "primary_province": {
+            "Jawa Barat": 0.3682,
+            "DKI Jakarta": 0.2658,
+            "Jawa Timur": 0.1973
+          },
+          "primary_region_group": {
+            "Jabodetabek": 0.6525,
+            "East Java": 0.1973,
+            "Central Java & DIY": 0.1503
+          },
+          "payment_profile": {
+            "mixed": 0.9102,
+            "balance_only": 0.0893,
+            "credit_card_only": 0.0006
+          },
+          "os_family": {
+            "Android": 1.0
+          },
+          "income_proxy_tier": {
+            "medium": 0.9958,
+            "high": 0.0042
+          },
+          "gender_lean_signal": {
+            "female_lean": 0.5036,
+            "male_lean": 0.4964
+          },
+          "age_bracket_estimate": {
+            "unknown_adult": 0.8193,
+            "25-45 (parent-leaning)": 0.1027,
+            "18-24 (student-leaning)": 0.0781
+          },
+          "education_signal": {
+            "no_signal": 0.9127,
+            "likely_in_tertiary_education": 0.0873
+          },
+          "work_location_estimate": {
+            "Kota Jakarta Pusat": 0.4024,
+            "Kota Surabaya": 0.1659,
+            "Kabupaten Bantul": 0.1044
+          },
+          "working_status_estimate": {
+            "irregular_or_unknown": 0.5666,
+            "likely_employed_regular_income": 0.4191,
+            "insufficient_signal": 0.0143
+          },
+          "marital_family_proxy": {
+            "no_signal": 0.9415,
+            "family_proxy_likely": 0.0585
+          }
+        }
+      },
+      "4": {
+        "segment_id": 4,
+        "label": "At-Risk / Dormant",
+        "n_users": 1369,
+        "share_of_users": 0.0563,
+        "feature_means": {
+          "recency_days": 24.8831,
+          "active_months": 1.9693,
+          "n_valid_purchases": 5.5603,
+          "avg_net_amount": 35406.278,
+          "cv_net_amount": 0.7372,
+          "category_entropy": 1.1838,
+          "merchant_diversity": 1.4768,
+          "merchant_repeat_ratio": 0.0,
+          "discount_tx_share": 0.1332,
+          "credit_card_share": 0.1996,
+          "failure_rate": 0.0434,
+          "refund_rate": 0.04,
+          "weekend_share": 0.2206,
+          "lebaran_lift": 1.3786,
+          "loyalty_member": 0.1534
+        },
+        "profiling_means": {
+          "total_net_amount": 251632.8707,
+          "is_legacy_os": 0.6844,
+          "is_promo_user": 0.5471,
+          "avg_rating": 3.7914,
+          "openness_score": 43.3525,
+          "conscientiousness_score": 50.1436,
+          "extraversion_score": 51.2059,
+          "agreeableness_score": 46.8362,
+          "neuroticism_score": 53.5847
+        },
+        "top_categories": {
+          "primary_city": {
+            "Kota Jakarta Pusat": 0.4215,
+            "Kota Surabaya": 0.1636,
+            "Kabupaten Bantul": 0.0993
+          },
+          "primary_province": {
+            "Jawa Barat": 0.3258,
+            "DKI Jakarta": 0.2995,
+            "Jawa Timur": 0.195
+          },
+          "primary_region_group": {
+            "Jabodetabek": 0.6574,
+            "East Java": 0.195,
+            "Central Java & DIY": 0.1476
+          },
+          "payment_profile": {
+            "mixed": 0.802,
+            "balance_only": 0.1958,
+            "credit_card_only": 0.0022
+          },
+          "os_family": {
+            "Android": 0.7874,
+            "iOS": 0.2126
+          },
+          "income_proxy_tier": {
+            "medium": 0.9408,
+            "low": 0.0511,
+            "high": 0.008
+          },
+          "gender_lean_signal": {
+            "female_lean": 0.6625,
+            "male_lean": 0.3375
+          },
+          "age_bracket_estimate": {
+            "unknown_adult": 0.9116,
+            "25-45 (parent-leaning)": 0.0482,
+            "18-24 (student-leaning)": 0.0402
+          },
+          "education_signal": {
+            "no_signal": 0.9569,
+            "likely_in_tertiary_education": 0.0431
+          },
+          "work_location_estimate": {
+            "Kota Jakarta Pusat": 0.3806,
+            "Kota Surabaya": 0.157,
+            "Kabupaten Bantul": 0.0979
+          },
+          "working_status_estimate": {
+            "irregular_or_unknown": 0.42,
+            "insufficient_signal": 0.3397,
+            "likely_employed_regular_income": 0.2403
+          },
+          "marital_family_proxy": {
+            "no_signal": 0.9912,
+            "family_proxy_likely": 0.0088
+          }
+        }
+      }
+    },
+    "size_chart": "D:\\Projects\\transaction-user-insights\\outputs\\figures\\segment_sizes.png",
+    "value_chart": "D:\\Projects\\transaction-user-insights\\outputs\\figures\\segment_value.png"
+  },
+  "daily_volume_chart": "D:\\Projects\\transaction-user-insights\\outputs\\figures\\daily_volume.png",
+  "region_map_chart": "D:\\Projects\\transaction-user-insights\\outputs\\figures\\region_map.png",
+  "q1": {
+    "table": [
+      {
+        "city": "Kabupaten Bantul",
+        "n_transactions": 14963,
+        "n_users": 2389,
+        "repeat_rate": 0.9866052741732942
+      },
+      {
+        "city": "Kota Bekasi",
+        "n_transactions": 16175,
+        "n_users": 8260,
+        "repeat_rate": 0.5809927360774818
+      },
+      {
+        "city": "Kota Bogor",
+        "n_transactions": 15326,
+        "n_users": 7993,
+        "repeat_rate": 0.566120355310897
+      },
+      {
+        "city": "Kota Depok",
+        "n_transactions": 16170,
+        "n_users": 8217,
+        "repeat_rate": 0.5841548010222709
+      },
+      {
+        "city": "Kota Jakarta Pusat",
+        "n_transactions": 43446,
+        "n_users": 10315,
+        "repeat_rate": 0.9322346097915657
+      },
+      {
+        "city": "Kota Malang",
+        "n_transactions": 10182,
+        "n_users": 3131,
+        "repeat_rate": 0.8527626956244011
+      },
+      {
+        "city": "Kota Semarang",
+        "n_transactions": 9887,
+        "n_users": 2361,
+        "repeat_rate": 0.941126641253706
+      },
+      {
+        "city": "Kota Surabaya",
+        "n_transactions": 23609,
+        "n_users": 3277,
+        "repeat_rate": 0.9926762282575526
+      },
+      {
+        "city": "Kota Tangerang",
+        "n_transactions": 17239,
+        "n_users": 8475,
+        "repeat_rate": 0.6096755162241888
+      }
+    ],
+    "march_cohort_retention_by_city": {
+      "Kabupaten Bantul": 1.0,
+      "Kota Bekasi": 1.0,
+      "Kota Bogor": 0.9986,
+      "Kota Depok": 0.9974,
+      "Kota Jakarta Pusat": 0.9993,
+      "Kota Malang": 1.0,
+      "Kota Semarang": 1.0,
+      "Kota Surabaya": 0.9996,
+      "Kota Tangerang": 1.0
+    },
+    "chi2_test": {
+      "chi2": 8267.920733479164,
+      "p_value": 0.0,
+      "dof": 8,
+      "cramers_v": 0.3897865632330691
+    },
+    "chart": "D:\\Projects\\transaction-user-insights\\outputs\\figures\\q1_repeat_rate_by_city.png",
+    "significant": true,
+    "repeat_rate_by_segment": {
+      "At-Risk / Dormant": {
+        "rate": 0.6086,
+        "n": 3227
+      },
+      "Bargain Hunters": {
+        "rate": 0.7302,
+        "n": 37961
+      },
+      "Champions (High-Value Loyal)": {
+        "rate": 0.8295,
+        "n": 1032
+      },
+      "New / Low Engagement": {
+        "rate": 1.0,
+        "n": 1
+      },
+      "Regular / Steady Spenders": {
+        "rate": 0.7271,
+        "n": 12197
+      }
+    }
+  },
+  "q2": {
+    "n_eligible_merchants": 5801,
+    "platform_discount_rate": 0.1705,
+    "promo_source_counts": {
+      "platform_baseline": 5672,
+      "merchant_funded": 129
+    },
+    "top_repeat_merchants": {
+      "M06204": 0.0952,
+      "M02920": 0.0952,
+      "M01979": 0.0909,
+      "M02189": 0.0909,
+      "M04512": 0.087,
+      "M02658": 0.08,
+      "M05064": 0.08,
+      "M02367": 0.0741,
+      "M01071": 0.0741,
+      "M02556": 0.069,
+      "M03239": 0.0625,
+      "M00206": 0.0541,
+      "M05180": 0.0541,
+      "M01291": 0.05,
+      "M02833": 0.05
+    },
+    "chart": "D:\\Projects\\transaction-user-insights\\outputs\\figures\\q2_merchant_repeat_rate.png",
+    "note": "No promo-source column exists; 'merchant_funded' vs 'platform_baseline' is a heuristic flag from a one-sided binomial test of each merchant's discount rate against the platform-wide rate, not a ground-truth label.",
+    "discount_rate_by_segment": {
+      "At-Risk / Dormant": {
+        "rate": 0.1688,
+        "n": 7612
+      },
+      "Bargain Hunters": {
+        "rate": 0.1711,
+        "n": 117415
+      },
+      "Champions (High-Value Loyal)": {
+        "rate": 0.1756,
+        "n": 4583
+      },
+      "New / Low Engagement": {
+        "rate": 0.0,
+        "n": 4
+      },
+      "Regular / Steady Spenders": {
+        "rate": 0.1684,
+        "n": 37383
+      }
+    }
+  },
+  "q3": {
+    "table": [
+      {
+        "mcc_group": "Food & Dining",
+        "n_transactions": 63261,
+        "gmv": 2917506500.0,
+        "n_users": 15829,
+        "march_to_may_growth_pct": -1.5,
+        "lebaran_lift": 2.45
+      },
+      {
+        "mcc_group": "Retail",
+        "n_transactions": 34007,
+        "gmv": 1558562500.0,
+        "n_users": 14106,
+        "march_to_may_growth_pct": 0.0,
+        "lebaran_lift": 2.4
+      },
+      {
+        "mcc_group": "Essentials",
+        "n_transactions": 16419,
+        "gmv": 754181600.0,
+        "n_users": 10287,
+        "march_to_may_growth_pct": 1.1,
+        "lebaran_lift": 2.34
+      },
+      {
+        "mcc_group": "Health",
+        "n_transactions": 15966,
+        "gmv": 731336200.0,
+        "n_users": 10201,
+        "march_to_may_growth_pct": -1.0,
+        "lebaran_lift": 2.44
+      },
+      {
+        "mcc_group": "Home",
+        "n_transactions": 8220,
+        "gmv": 373547000.0,
+        "n_users": 6436,
+        "march_to_may_growth_pct": -2.3,
+        "lebaran_lift": 2.38
+      },
+      {
+        "mcc_group": "Other",
+        "n_transactions": 7810,
+        "gmv": 362307900.0,
+        "n_users": 6232,
+        "march_to_may_growth_pct": 5.9,
+        "lebaran_lift": 2.46
+      },
+      {
+        "mcc_group": "Vehicle",
+        "n_transactions": 7771,
+        "gmv": 350602400.0,
+        "n_users": 6191,
+        "march_to_may_growth_pct": -1.3,
+        "lebaran_lift": 2.36
+      },
+      {
+        "mcc_group": "Education",
+        "n_transactions": 3253,
+        "gmv": 145070600.0,
+        "n_users": 2921,
+        "march_to_may_growth_pct": -5.9,
+        "lebaran_lift": 2.53
+      },
+      {
+        "mcc_group": "Personal Care",
+        "n_transactions": 3143,
+        "gmv": 142501600.0,
+        "n_users": 2819,
+        "march_to_may_growth_pct": -7.1,
+        "lebaran_lift": 2.52
+      },
+      {
+        "mcc_group": "Active Lifestyle",
+        "n_transactions": 3084,
+        "gmv": 141171500.0,
+        "n_users": 2794,
+        "march_to_may_growth_pct": 3.5,
+        "lebaran_lift": 2.63
+      },
+      {
+        "mcc_group": "Travel",
+        "n_transactions": 2578,
+        "gmv": 115198600.0,
+        "n_users": 2391,
+        "march_to_may_growth_pct": 0.1,
+        "lebaran_lift": 2.67
+      },
+      {
+        "mcc_group": "Entertainment",
+        "n_transactions": 1485,
+        "gmv": 69634400.0,
+        "n_users": 1420,
+        "march_to_may_growth_pct": 4.0,
+        "lebaran_lift": 2.61
+      }
+    ],
+    "best_selling": "Food & Dining",
+    "rarely_ordered": "Entertainment",
+    "chart": "D:\\Projects\\transaction-user-insights\\outputs\\figures\\q3_category_volume.png",
+    "dominant_category_by_segment": {
+      "At-Risk / Dormant": {
+        "Food & Dining": 0.3736,
+        "Retail": 0.2032
+      },
+      "Bargain Hunters": {
+        "Food & Dining": 0.3796,
+        "Retail": 0.2044
+      },
+      "Champions (High-Value Loyal)": {
+        "Food & Dining": 0.3882,
+        "Retail": 0.1914
+      },
+      "New / Low Engagement": {
+        "Food & Dining": 0.5,
+        "Retail": 0.25
+      },
+      "Regular / Steady Spenders": {
+        "Food & Dining": 0.3764,
+        "Retail": 0.2028
+      }
+    }
+  },
+  "q4": {
+    "by_os": [
+      {
+        "os_family": "Android",
+        "n_users": 16160,
+        "gmv": 7661620800.0,
+        "failure_rate": 0.0507
+      }
+    ],
+    "recommended_min_android_version": 1.0,
+    "coverage_target": 0.9,
+    "chart": "D:\\Projects\\transaction-user-insights\\outputs\\figures\\q4_os_coverage.png",
+    "legacy_share_by_segment": {
+      "At-Risk / Dormant": {
+        "rate": 0.6844,
+        "n": 1369
+      },
+      "Bargain Hunters": {
+        "rate": 0.8651,
+        "n": 11134
+      },
+      "Champions (High-Value Loyal)": {
+        "rate": 0.8338,
+        "n": 373
+      },
+      "New / Low Engagement": {
+        "rate": 0.0,
+        "n": 7871
+      },
+      "Regular / Steady Spenders": {
+        "rate": 0.864,
+        "n": 3574
+      }
+    }
+  },
+  "q5": {
+    "table": [
+      {
+        "payment_method": "balance",
+        "n_transactions": 133360,
+        "aov": 45836.98,
+        "refund_rate": 0.05,
+        "failure_rate": 0.03,
+        "discount_rate": 0.17,
+        "mdr_cost": 42789739.3
+      },
+      {
+        "payment_method": "credit_card",
+        "n_transactions": 33637,
+        "aov": 46044.56,
+        "refund_rate": 0.05,
+        "failure_rate": 0.03,
+        "discount_rate": 0.17,
+        "mdr_cost": 34073619.8
+      }
+    ],
+    "mann_whitney_u": {
+      "u_stat": 2241709960.0,
+      "p_value": 0.8787636947404234
+    },
+    "significant": "False",
+    "total_mdr_cost": 76863359.1,
+    "chart": "D:\\Projects\\transaction-user-insights\\outputs\\figures\\q5_aov_by_method.png",
+    "credit_card_share_by_segment": {
+      "At-Risk / Dormant": {
+        "rate": 0.2024,
+        "n": 7612
+      },
+      "Bargain Hunters": {
+        "rate": 0.2009,
+        "n": 117415
+      },
+      "Champions (High-Value Loyal)": {
+        "rate": 0.2021,
+        "n": 4583
+      },
+      "New / Low Engagement": {
+        "rate": 0.0,
+        "n": 4
+      },
+      "Regular / Steady Spenders": {
+        "rate": 0.2028,
+        "n": 37383
+      }
+    }
+  },
+  "q6": {
+    "mean_rating_by_factor": {
+      "payment_method": {
+        "balance": 3.799,
+        "credit_card": 3.806
+      },
+      "mcc_group": {
+        "Active Lifestyle": 3.791,
+        "Education": 3.819,
+        "Entertainment": 3.8,
+        "Essentials": 3.787,
+        "Food & Dining": 3.799,
+        "Health": 3.819,
+        "Home": 3.814,
+        "Other": 3.797,
+        "Personal Care": 3.76,
+        "Retail": 3.803,
+        "Travel": 3.808,
+        "Vehicle": 3.79
+      },
+      "discount_applied": {
+        "False": 3.8,
+        "True": 3.805
+      }
+    },
+    "refund_notes_crosstab": {
+      "False": {
+        "False": 128689,
+        "True": 6905
+      },
+      "True": {
+        "False": 38308,
+        "True": 2053
+      }
+    },
+    "chi2_test": {
+      "chi2": 0.001139362171990621,
+      "p_value": 0.9730729674002827,
+      "dof": 1,
+      "cramers_v": 8.04692756402996e-05
+    },
+    "chart": "D:\\Projects\\transaction-user-insights\\outputs\\figures\\q6_rating_by_category.png",
+    "rating_by_segment": {
+      "At-Risk / Dormant": {
+        "mean_rating": 3.804,
+        "n": 8019
+      },
+      "Bargain Hunters": {
+        "mean_rating": 3.803,
+        "n": 123698
+      },
+      "Champions (High-Value Loyal)": {
+        "mean_rating": 3.82,
+        "n": 4773
+      },
+      "New / Low Engagement": {
+        "mean_rating": 3.5,
+        "n": 4
+      },
+      "Regular / Steady Spenders": {
+        "mean_rating": 3.788,
+        "n": 39461
+      }
+    }
+  },
+  "q7": {
+    "comparison": {
+      "members": {
+        "n_users": 3869,
+        "avg_n_transactions": 11.43,
+        "avg_total_net_amount": 472451.25,
+        "avg_active_months": 2.94
+      },
+      "non_members": {
+        "n_users": 20452,
+        "avg_n_transactions": 11.48,
+        "avg_total_net_amount": 285238.94,
+        "avg_active_months": 2.93
+      }
+    },
+    "mann_whitney_u": {
+      "u_stat": 39270831.5,
+      "p_value": 0.461709969942643
+    },
+    "significant": "False",
+    "device_share_top_decile_engaged_users": {
+      "Android": 0.676,
+      "iOS": 0.324
+    },
+    "chart": "D:\\Projects\\transaction-user-insights\\outputs\\figures\\q7_loyalty_comparison.png",
+    "segment_share_members": {
+      "Regular / Steady Spenders": 0.9238,
+      "At-Risk / Dormant": 0.0543,
+      "Champions (High-Value Loyal)": 0.022
+    },
+    "segment_share_non_members": {
+      "Bargain Hunters": 0.5444,
+      "New / Low Engagement": 0.3849,
+      "At-Risk / Dormant": 0.0567,
+      "Champions (High-Value Loyal)": 0.0141
+    }
+  },
+  "q8": {
+    "never_promo_share_by_city": {
+      "Kabupaten Bantul": 0.1626,
+      "Kota Bekasi": 0.1736,
+      "Kota Bogor": 0.1817,
+      "Kota Depok": 0.2015,
+      "Kota Jakarta Pusat": 0.1692,
+      "Kota Malang": 0.2138,
+      "Kota Semarang": 0.201,
+      "Kota Surabaya": 0.1845,
+      "Kota Tangerang": 0.1882
+    },
+    "chi2_test": {
+      "chi2": 16.42544042580012,
+      "p_value": 0.03668010792426616,
+      "dof": 8,
+      "cramers_v": 0.03188143298102008
+    },
+    "significant": true,
+    "chart": "D:\\Projects\\transaction-user-insights\\outputs\\figures\\q8_never_promo_by_city.png",
+    "interpretation_note": "A higher never-promo share can reflect promo unavailability, lower price sensitivity, or lower promo awareness in that city; this dataset cannot distinguish between the three without promo-eligibility or exposure data.",
+    "never_promo_share_by_segment": {
+      "At-Risk / Dormant": {
+        "rate": 0.3033,
+        "n": 1078
+      },
+      "Bargain Hunters": {
+        "rate": 0.1705,
+        "n": 11134
+      },
+      "Champions (High-Value Loyal)": {
+        "rate": 0.1072,
+        "n": 373
+      },
+      "New / Low Engagement": {
+        "rate": 1.0,
+        "n": 1
+      },
+      "Regular / Steady Spenders": {
+        "rate": 0.1656,
+        "n": 3574
+      }
+    }
+  }
+}
